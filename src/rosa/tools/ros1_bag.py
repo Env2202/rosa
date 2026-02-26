@@ -164,7 +164,7 @@ def rosbag_play(
     if not os.path.exists(bag_filepath):
         return {
             "error": f"Bag file not found: {bag_filepath}",
-            "available_bags": rosbag_list()["bags"] if rosbag_list()["total"] > 0 else [],
+            "available_bags": rosbag_list.func()["bags"] if rosbag_list.func()["total"] > 0 else [],
         }
 
     # Build the rosbag play command
@@ -231,7 +231,7 @@ def rosbag_list(
 
     Example:
         To list all bags:
-        rosbag_list()
+        rosbag_list.func()
 
         To list only bags larger than 1MB:
         rosbag_list(min_size=1048576)
