@@ -20,20 +20,59 @@ import unittest
 from datetime import datetime
 from unittest.mock import patch, MagicMock, call
 
+# Mock langchain before importing modules that use it
+mock_langchain = MagicMock()
+mock_langchain_agents = MagicMock()
+mock_langchain_community = MagicMock()
+mock_langchain_core = MagicMock()
+mock_langchain_openai = MagicMock()
+mock_langchain_ollama = MagicMock()
+
+sys.modules["langchain"] = mock_langchain
+sys.modules["langchain.agents"] = mock_langchain_agents
+sys.modules["langchain.agents.format_scratchpad"] = MagicMock()
+sys.modules["langchain.agents.format_scratchpad.openai_tools"] = MagicMock()
+sys.modules["langchain.agents.output_parsers"] = MagicMock()
+sys.modules["langchain.agents.output_parsers.openai_tools"] = MagicMock()
+sys.modules["langchain.prompts"] = MagicMock()
+sys.modules["langchain_community"] = mock_langchain_community
+sys.modules["langchain_community.callbacks"] = MagicMock()
+sys.modules["langchain_core"] = mock_langchain_core
+sys.modules["langchain_core.messages"] = MagicMock()
+sys.modules["langchain_core.prompts"] = MagicMock()
+sys.modules["langchain_ollama"] = mock_langchain_ollama
+sys.modules["langchain_openai"] = mock_langchain_openai
+
+# Link modules
+mock_langchain.agents = mock_langchain_agents
+mock_langchain.prompts = sys.modules["langchain.prompts"]
+mock_langchain_community.callbacks = sys.modules["langchain_community.callbacks"]
+mock_langchain_core.messages = sys.modules["langchain_core.messages"]
+mock_langchain_core.prompts = sys.modules["langchain_core.prompts"]
+
+# Setup specific mock attributes
+def mock_tool(func):
+    func.func = func
+    return func
+
+mock_langchain_agents.tool = mock_tool
+mock_langchain_agents.AgentExecutor = MagicMock()
+mock_langchain_openai.ChatOpenAI = MagicMock()
+mock_langchain_openai.AzureChatOpenAI = MagicMock()
+mock_langchain_ollama.ChatOllama = MagicMock()
+
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../src"))
 
-try:
-    from rosa.tools.ros2_bag import (
-        get_bags_directory,
-        ros2bag_record,
-        ros2bag_play,
-        ros2bag_list,
-        ros2bag_info,
-        ros2bag_delete,
-    )
-except (ModuleNotFoundError, ImportError):
-    pass
+import rosa.tools.ros2_bag as ros2_bag
+from rosa.tools.ros2_bag import (
+    get_bags_directory,
+    ros2bag_record,
+    ros2bag_play,
+    ros2bag_list,
+    ros2bag_info,
+    ros2bag_delete,
+)
 
 
 class TestROS2BagTools(unittest.TestCase):
@@ -69,9 +108,15 @@ class TestROS2BagTools(unittest.TestCase):
 
     @patch("rosa.tools.ros2_bag.subprocess.Popen")
     @patch("rosa.tools.ros2_bag.get_bags_directory")
-    def test_ros2bag_record_success(self, mock_get_dir, mock_popen):
+    @patch("rosa.tools.ros2_bag.datetime")
+    def test_ros2bag_record_success(self, mock_datetime, mock_get_dir, mock_popen):
         """Test successful bag recording."""
         mock_get_dir.return_value = self.test_dir
+        
+        # Mock datetime
+        mock_now = MagicMock()
+        mock_now.strftime.return_value = "20240115_143022"
+        mock_datetime.now.return_value = mock_now
         
         # Create a dummy bag directory (ROS2 bags are directories)
         bag_dir = os.path.join(self.test_dir, "20240115_143022")
@@ -85,7 +130,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.returncode = 0
         mock_popen.return_value = mock_process
 
-        result = ros2bag_record(duration=5, topics=["/scan", "/odom"])
+        result = ros2bag_record.func(duration=5, topics=["/scan", "/odom"])
 
         self.assertTrue(result["success"])
         self.assertIn("bag_file", result)
@@ -96,9 +141,15 @@ class TestROS2BagTools(unittest.TestCase):
 
     @patch("rosa.tools.ros2_bag.subprocess.Popen")
     @patch("rosa.tools.ros2_bag.get_bags_directory")
-    def test_ros2bag_record_default_topics(self, mock_get_dir, mock_popen):
+    @patch("rosa.tools.ros2_bag.datetime")
+    def test_ros2bag_record_default_topics(self, mock_datetime, mock_get_dir, mock_popen):
         """Test that ros2bag_record uses default topics when none are provided."""
         mock_get_dir.return_value = self.test_dir
+        
+        # Mock datetime
+        mock_now = MagicMock()
+        mock_now.strftime.return_value = "20240115_143022"
+        mock_datetime.now.return_value = mock_now
         
         # Create a dummy bag directory
         bag_dir = os.path.join(self.test_dir, "20240115_143022")
@@ -111,7 +162,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.returncode = 0
         mock_popen.return_value = mock_process
 
-        result = ros2bag_record()
+        result = ros2bag_record.func()
 
         self.assertTrue(result["success"])
         self.assertEqual(result["topics_recorded"], ["/scan", "/odom"])
@@ -122,7 +173,7 @@ class TestROS2BagTools(unittest.TestCase):
         """Test ros2bag_record with invalid duration."""
         mock_get_dir.return_value = self.test_dir
 
-        result = ros2bag_record(duration=-1)
+        result = ros2bag_record.func(duration=-1)
 
         self.assertIn("error", result)
         self.assertIn("Duration must be greater than 0", result["error"])
@@ -138,7 +189,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.returncode = 0
         mock_popen.return_value = mock_process
 
-        result = ros2bag_record(duration=5)
+        result = ros2bag_record.func(duration=5)
 
         self.assertIn("error", result)
         self.assertIn("Bag directory was not created", result["error"])
@@ -154,7 +205,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.returncode = 1
         mock_popen.return_value = mock_process
 
-        result = ros2bag_record(duration=5)
+        result = ros2bag_record.func(duration=5)
 
         self.assertIn("error", result)
         self.assertIn("Failed to record bag", result["error"])
@@ -174,7 +225,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.poll.return_value = None  # Process is still running
         mock_popen.return_value = mock_process
 
-        result = ros2bag_play("20240115_143022")
+        result = ros2bag_play.func("20240115_143022")
 
         self.assertTrue(result["success"])
         self.assertIn("bag_file", result)
@@ -186,7 +237,7 @@ class TestROS2BagTools(unittest.TestCase):
         """Test ros2bag_play when bag directory doesn't exist."""
         mock_get_dir.return_value = self.test_dir
 
-        result = ros2bag_play("nonexistent")
+        result = ros2bag_play.func("nonexistent")
 
         self.assertIn("error", result)
         self.assertIn("Bag directory not found", result["error"])
@@ -205,7 +256,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.poll.return_value = None
         mock_popen.return_value = mock_process
 
-        result = ros2bag_play("20240115_143022", rate=2.0)
+        result = ros2bag_play.func("20240115_143022", rate=2.0)
 
         self.assertTrue(result["success"])
         self.assertEqual(result["rate"], 2.0)
@@ -224,7 +275,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.poll.return_value = None
         mock_popen.return_value = mock_process
 
-        result = ros2bag_play("20240115_143022", loop=True)
+        result = ros2bag_play.func("20240115_143022", loop=True)
 
         self.assertTrue(result["success"])
         self.assertEqual(result["loop"], True)
@@ -244,7 +295,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.communicate.return_value = (b"", b"Error")
         mock_popen.return_value = mock_process
 
-        result = ros2bag_play("20240115_143022")
+        result = ros2bag_play.func("20240115_143022")
 
         self.assertIn("error", result)
         self.assertIn("Failed to start playback", result["error"])
@@ -254,7 +305,7 @@ class TestROS2BagTools(unittest.TestCase):
         """Test ros2bag_list when no bags exist."""
         mock_get_dir.return_value = self.test_dir
 
-        result = ros2bag_list()
+        result = ros2bag_list.func()
 
         self.assertEqual(result["total"], 0)
         self.assertEqual(result["bags"], [])
@@ -272,7 +323,7 @@ class TestROS2BagTools(unittest.TestCase):
             with open(os.path.join(dirpath, "metadata.yaml"), "w") as f:
                 f.write("dummy metadata")
 
-        result = ros2bag_list()
+        result = ros2bag_list.func()
 
         self.assertEqual(result["total"], 3)
         self.assertEqual(len(result["bags"]), 3)
@@ -295,7 +346,7 @@ class TestROS2BagTools(unittest.TestCase):
         with open(os.path.join(large_dir, "data.db3"), "w") as f:
             f.write("x" * 1000)  # 1000 bytes
 
-        result = ros2bag_list(min_size=500)
+        result = ros2bag_list.func(min_size=500)
 
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["bags"][0]["filename"], "large")
@@ -313,7 +364,7 @@ class TestROS2BagTools(unittest.TestCase):
             with open(os.path.join(dirpath, "metadata.yaml"), "w") as f:
                 f.write("dummy metadata")
 
-        result = ros2bag_list(pattern="20240115")
+        result = ros2bag_list.func(pattern="20240115")
 
         self.assertEqual(result["total"], 2)
         filenames = [bag["filename"] for bag in result["bags"]]
@@ -333,7 +384,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.returncode = 0
         mock_popen.return_value = mock_process
 
-        result = ros2bag_info("20240115_143022")
+        result = ros2bag_info.func("20240115_143022")
 
         self.assertTrue(result["success"])
         self.assertIn("info", result)
@@ -345,7 +396,7 @@ class TestROS2BagTools(unittest.TestCase):
         """Test ros2bag_info when bag directory doesn't exist."""
         mock_get_dir.return_value = self.test_dir
 
-        result = ros2bag_info("nonexistent")
+        result = ros2bag_info.func("nonexistent")
 
         self.assertIn("error", result)
         self.assertIn("Bag directory not found", result["error"])
@@ -364,7 +415,7 @@ class TestROS2BagTools(unittest.TestCase):
         mock_process.returncode = 1
         mock_popen.return_value = mock_process
 
-        result = ros2bag_info("20240115_143022")
+        result = ros2bag_info.func("20240115_143022")
 
         self.assertIn("error", result)
         self.assertIn("Failed to get bag info", result["error"])
@@ -379,7 +430,7 @@ class TestROS2BagTools(unittest.TestCase):
         with open(os.path.join(bag_dir, "metadata.yaml"), "w") as f:
             f.write("dummy metadata")
 
-        result = ros2bag_delete("20240115_143022")
+        result = ros2bag_delete.func("20240115_143022")
 
         self.assertTrue(result["success"])
         self.assertFalse(os.path.exists(bag_dir))
@@ -390,7 +441,7 @@ class TestROS2BagTools(unittest.TestCase):
         """Test ros2bag_delete when bag directory doesn't exist."""
         mock_get_dir.return_value = self.test_dir
 
-        result = ros2bag_delete("nonexistent")
+        result = ros2bag_delete.func("nonexistent")
 
         self.assertIn("error", result)
         self.assertIn("Bag directory not found", result["error"])
@@ -409,7 +460,7 @@ class TestROS2BagTools(unittest.TestCase):
                 mock_process.poll.return_value = None
                 mock_popen.return_value = mock_process
 
-                result = ros2bag_play(bag_dir)
+                result = ros2bag_play.func(bag_dir)
 
                 self.assertTrue(result["success"])
 
@@ -423,7 +474,7 @@ class TestROS2BagTools(unittest.TestCase):
         with open(os.path.join(bag_dir, "data.db3"), "w") as f:
             f.write("x" * 5000)
 
-        result = ros2bag_list()
+        result = ros2bag_list.func()
 
         self.assertEqual(result["total"], 1)
         bag_info = result["bags"][0]
@@ -454,7 +505,7 @@ class TestROS2BagTools(unittest.TestCase):
         with open(os.path.join(hidden_dir, "data.db3"), "w") as f:
             f.write("hidden data")
 
-        result = ros2bag_list()
+        result = ros2bag_list.func()
 
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["bags"][0]["filename"], "20240115_143022")
