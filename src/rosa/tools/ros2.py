@@ -21,6 +21,9 @@ from typing import List, Optional, Tuple
 from langchain.agents import tool
 from rclpy.logging import get_logging_directory
 
+# Import bag-related tools
+from . import ros2_bag
+
 
 def execute_ros_command(command: str) -> Tuple[bool, str]:
     """
@@ -425,3 +428,11 @@ def roslog_list(min_size: int = 2048, blacklist: Optional[List[str]] = None) -> 
         total=len(logs),
         logs=logs,
     )
+
+
+# Export bag-related tools
+ros2bag_record = ros2_bag.ros2bag_record
+ros2bag_play = ros2_bag.ros2bag_play
+ros2bag_list = ros2_bag.ros2bag_list
+ros2bag_info = ros2_bag.ros2bag_info
+ros2bag_delete = ros2_bag.ros2bag_delete
