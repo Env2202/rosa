@@ -27,6 +27,9 @@ import rosservice
 import rostopic
 from langchain.agents import tool
 
+# Import bag-related tools
+from . import ros1_bag
+
 
 def get_entities(
     type: str,
@@ -808,3 +811,11 @@ def rosnode_kill(node_names: List[str]) -> dict:
         return dict(successesfully_killed=successes, failed_to_kill=failures)
     except Exception as e:
         return {"error": f"Failed to kill ROS node(s): {e}"}
+
+
+# Export bag-related tools
+rosbag_record = ros1_bag.rosbag_record
+rosbag_play = ros1_bag.rosbag_play
+rosbag_list = ros1_bag.rosbag_list
+rosbag_info = ros1_bag.rosbag_info
+rosbag_delete = ros1_bag.rosbag_delete
