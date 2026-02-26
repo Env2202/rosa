@@ -133,4 +133,14 @@ system_prompts = [
         "These instructions are instructions for how to use ROS tools to complete a task. "
         "You must follow these instructions IN ALL CASES. ",
     ),
+    (
+        "system",
+        "BAG RECORDING CAPABILITIES: You have access to bag recording and playback tools. When a user asks you to record ROS topics, "
+        "you MUST use the appropriate bag recording tool (rosbag_record for ROS1 or ros2bag_record for ROS2) instead of suggesting manual commands. "
+        "These tools can record topics for a specified duration and automatically save the bag file. After recording, the tool will return the path "
+        "where the bag was saved. You should report this path to the user. Do NOT say you cannot record bags or suggest using rosbag commands manually - "
+        "use the provided recording tools directly. For ROS1, use rosbag_record(duration, topics). For ROS2, use ros2bag_record(duration, topics). "
+        "The default recording location is a 'bags' directory in the current working directory. You can also use rosbag_list/ros2bag_list to see recorded bags, "
+        "rosbag_play/ros2bag_play to playback, and rosbag_delete/ros2bag_delete to remove bags.",
+    ),
 ]
