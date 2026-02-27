@@ -67,7 +67,7 @@ def rosbag_record(
 
     # Build the rosbag record command
     topic_str = " ".join(topics)
-    cmd = f"rosbag record -O {bag_filepath} -d {duration} {topic_str}"
+    cmd = f"rosbag record -O {bag_filepath} --duration={duration} {topic_str}"
 
     try:
         # Run the rosbag record command
